@@ -1,6 +1,8 @@
-import { ChangeEvent, FormEvent, useEffect, useId, useState } from 'react';
-import reactLogo from './assets/react.svg';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+
 import './App.css';
+import ActionsButtons from './components/ActionsButtons';
+import CreateProjectForm from './components/CreateProject';
 
 type Project = {
     title: string;
@@ -18,12 +20,37 @@ function App() {
         creator: '',
         id: '',
     });
+    const [isFormOpen, setIsFormOpen] = useState(false);
+
+    useEffect(() => {
+        const indexDB = window.indexedDB.open('projects', 1);
+
+        indexDB.onsuccess = () => {
+            const db = indexDB.result;
+            const tx = db.transaction('project', 'readonly');
+            const store = tx.objectStore('project');
+            const request = store.getAll();
+            request.onsuccess = () => {
+                setProjects(request.result);
+            };
+        };
+
+        indexDB.onerror = () => {
+            console.log('error');
+        };
+
+        indexDB.onupgradeneeded = () => {
+            const db = indexDB.result;
+            db.createObjectStore('project', { keyPath: 'id' });
+        };
+    }, []);
 
     const createProjectHandler = (
         e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLTextAreaElement>
     ) => {
         const key = e.target.name;
         const value = e.target.value;
+
         setProject((prevState) => {
             return {
                 ...prevState,
@@ -57,35 +84,97 @@ function App() {
         };
     };
 
-    useEffect(() => {
+    const deleteProject = (
+        e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+    ) => {
+        const id = e.currentTarget.parentElement?.id || '';
         const indexDB = window.indexedDB.open('projects', 1);
 
         indexDB.onsuccess = () => {
             const db = indexDB.result;
-            const tx = db.transaction('project', 'readonly');
+            const tx = db.transaction('project', 'readwrite');
             const store = tx.objectStore('project');
-            const request = store.getAll();
+            const request = store.get(id);
+
             request.onsuccess = () => {
-                setProjects(request.result);
+                const data = request.result;
+                if (data) {
+                    store.delete(id);
+                    setProjects((prevState) => {
+                        return prevState.filter((project) => project.id !== id);
+                    });
+                }
             };
         };
+    };
 
-        indexDB.onerror = () => {
-            console.log('error');
-        };
+    const editProject = (
+        e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+    ) => {
+        const key = e.currentTarget.name;
+        const value = e.currentTarget.value;
+        console.log(key, value);
+        setProject((prevState) => {
+            return {
+                ...prevState,
+                [key]: value,
+                id: e.timeStamp.toString(),
+            };
+        });
+    };
 
-        indexDB.onupgradeneeded = () => {
+    const onSubmitEdit = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const id = e.currentTarget.closest('.id-holder')?.id || '';
+        const indexDB = window.indexedDB.open('projects', 1);
+
+        indexDB.onsuccess = () => {
             const db = indexDB.result;
-            db.createObjectStore('project', { keyPath: 'id' });
+            const tx = db.transaction('project', 'readwrite');
+            const store = tx.objectStore('project');
+            const request = store.get(id);
+
+            request.onsuccess = () => {
+                const data = request.result;
+                console.log(data);
+                if (data) {
+                    store.put({ ...project, id: id });
+                    setProjects((prevState) => {
+                        return prevState.map((p) => {
+                            console.log(p.id, id, p.id === id);
+                            if (p.id === id) {
+                                return {
+                                    id: p.id,
+                                    title: project.title || p.title,
+                                    description: project.description || p.title,
+                                    creator: project.creator || p.creator,
+                                };
+                            }
+                            return p;
+                        });
+                    });
+                    setProject({
+                        title: '',
+                        description: '',
+                        creator: '',
+                        id: '',
+                    });
+                }
+            };
         };
-    }, []);
+    };
 
     return (
         <div className="App">
             <div className="grid">
                 <div className="flex justify-between border-b pb-4 mb-8">
                     <h1 className="font-bold">My Projects</h1>
-                    <button className="bg-green-800">Create Project +</button>
+                    <button
+                        onClick={() => setIsFormOpen(true)}
+                        className="bg-green-800"
+                    >
+                        Create Project +
+                    </button>
                 </div>
                 <div className="grid gap-4 text-left">
                     <div className="grid grid-cols-4 gap-4 ">
@@ -112,48 +201,22 @@ function App() {
                             <h3 className="text-lg">{project.title}</h3>
                             <p>{project.description}</p>
                             <p>{project.creator}</p>
-                            <button>Actions</button>
+                            <ActionsButtons
+                                id={project.id}
+                                onEdit={editProject}
+                                onSubmitEdit={onSubmitEdit}
+                                onDelete={deleteProject}
+                            />
                         </div>
                     ))}
                 </div>
             </div>
-
-            <form onSubmit={(e) => addProjectToIndexDB(e)} className="grid">
-                <div>
-                    <p>Name</p>
-                    <input
-                        required
-                        type="text"
-                        name="title"
-                        id="title"
-                        onChange={(e) => createProjectHandler(e)}
-                    />
-                </div>
-                <div>
-                    <p>Description</p>
-                    <textarea
-                        required
-                        name="description"
-                        id="title"
-                        cols={30}
-                        rows={10}
-                        onChange={(e) => createProjectHandler(e)}
-                    ></textarea>
-                </div>
-                <div>
-                    <p>Creator</p>
-                    <input
-                        required
-                        type="text"
-                        name="creator"
-                        id="creator"
-                        onChange={(e) => createProjectHandler(e)}
-                    />
-                </div>
-                <div>
-                    <button>Create</button>
-                </div>
-            </form>
+            <CreateProjectForm
+                isFormOpen={isFormOpen}
+                setIsFormOpen={setIsFormOpen}
+                addProjectToIndexDB={addProjectToIndexDB}
+                createProject={createProjectHandler}
+            />
         </div>
     );
 }
