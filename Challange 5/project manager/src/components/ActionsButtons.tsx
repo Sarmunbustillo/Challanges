@@ -84,7 +84,7 @@ const ActionsButtons: React.FC<ActionsButtonsProps> = ({
                                 />
                             </div>
                             <div>
-                                <button className="bg-blue-800 mt-2">
+                                <button className="bg-blue-800 mt-2 w-full">
                                     Update
                                 </button>
                             </div>

@@ -16,8 +16,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
             {isFormOpen ? (
                 <div className="w-screen h-screen absolute top-0 left-0 backdrop-blur-sm bg-black/75 ">
                     <form
-                        onSubmit={(e) => addProjectToIndexDB(e)}
-                        className="grid absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                        onSubmit={(e) => {
+                            addProjectToIndexDB(e);
+                            setIsFormOpen(false);
+                        }}
+                        className="grid text-left gap-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                     >
                         <button
                             onClick={() => setIsFormOpen(false)}
@@ -29,6 +32,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                         <div>
                             <p>Name</p>
                             <input
+                                className="w-full"
                                 required
                                 type="text"
                                 name="title"
@@ -40,6 +44,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                             <p>Description</p>
                             <textarea
                                 required
+                                className="w-full"
                                 name="description"
                                 id="title"
                                 cols={30}
@@ -51,6 +56,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                             <p>Creator</p>
                             <input
                                 required
+                                className="w-full"
                                 type="text"
                                 name="creator"
                                 id="creator"
@@ -58,7 +64,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({
                             />
                         </div>
                         <div>
-                            <button>Create</button>
+                            <button className="bg-blue-800 w-full">
+                                Create
+                            </button>
                         </div>
                     </form>
                 </div>
